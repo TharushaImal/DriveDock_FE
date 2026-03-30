@@ -1,6 +1,7 @@
 package com.climaxion.drivedock.fragment;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -11,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,8 +25,9 @@ import com.climaxion.drivedock.api.SessionManager;
 
 public class ProfileFragment extends Fragment {
 
-    private TextView pfUserName, pfUserEmail, pfUserPhone, pfMemberSince;
+    private TextView pfUserName, pfUserEmail, pfUserPhone, pfMemberSince, tvContactPhone;
     private Button btnEditProfile, btnMyReservations, btnLogout;
+    private LinearLayout layoutContactUs;
 
     private SessionManager sessionManager;
 
@@ -63,6 +66,9 @@ public class ProfileFragment extends Fragment {
         btnEditProfile = view.findViewById(R.id.btnEditProfile);
         btnMyReservations = view.findViewById(R.id.btnMyReservations);
         btnLogout = view.findViewById(R.id.btnLogout);
+        
+        layoutContactUs = view.findViewById(R.id.layoutContactUs);
+        tvContactPhone = view.findViewById(R.id.tvContactPhone);
     }
 
     private void setupClickListeners() {
@@ -79,6 +85,13 @@ public class ProfileFragment extends Fragment {
             startActivity(new Intent(getActivity(), LoginActivity.class));
             requireActivity().finish();
             Toast.makeText(getContext(), "Logged out successfully", Toast.LENGTH_SHORT).show();
+        });
+
+        layoutContactUs.setOnClickListener(v -> {
+            String phoneNumber = tvContactPhone.getText().toString();
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(Uri.parse("tel:" + phoneNumber));
+            startActivity(intent);
         });
     }
 
