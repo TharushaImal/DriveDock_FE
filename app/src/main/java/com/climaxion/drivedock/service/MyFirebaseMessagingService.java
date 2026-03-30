@@ -8,14 +8,19 @@ import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 import com.climaxion.drivedock.R;
 import com.climaxion.drivedock.activity.MainActivity;
+import com.climaxion.drivedock.api.ApiClient;
+import com.climaxion.drivedock.api.ApiInterface;
+import com.climaxion.drivedock.api.SessionManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.google.gson.JsonObject;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
@@ -26,6 +31,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
         super.onMessageReceived(message);
+        Log.d("FCM", "Message received from: " + message.getFrom());
 
         if (message.getNotification() != null) {
             String title = message.getNotification().getTitle();
@@ -34,22 +40,45 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
 
         if (message.getData().size() > 0) {
+            Log.d("FCM", "Data payload: " + message.getData().toString());
             String title = message.getData().get("title");
             String body = message.getData().get("body");
-            sendNotification(title, body);
+            if (title != null && body != null) {
+                sendNotification(title, body);
+            }
         }
     }
 
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
+        Log.d("FCM", "New token generated: " + token);
 
+        getSharedPreferences("DriveDockPref", MODE_PRIVATE)
+                .edit()
+                .putString("fcmToken", token)
+                .apply();
         sendRegistrationToServer(token);
     }
 
     private void sendRegistrationToServer(String token) {
-        // TODO: Send token to your backend server
-        // This will be used to send notifications to specific devices
+        SessionManager sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) return;
+
+        int userId = sessionManager.getUserId();
+
+        ApiInterface api = ApiInterface.class.cast(ApiClient.getClient());
+
+        api.saveFcmToken(userId, token).enqueue(new retrofit2.Callback<JsonObject>() {
+            @Override
+            public void onResponse(retrofit2.Call<JsonObject> call, retrofit2.Response<JsonObject> response) {
+                Log.d("FCM", "Token saved to backend");
+            }
+            @Override
+            public void onFailure(retrofit2.Call<JsonObject> call, Throwable t) {
+                Log.e("FCM", "Failed to save token: " + t.getMessage());
+            }
+        });
     }
 
     private void sendNotification(String title, String body) {
@@ -67,7 +96,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentText(body)
                         .setAutoCancel(true)
                         .setSound(defaultSoundUri)
-                        .setContentIntent(pendingIntent);
+                        .setContentIntent(pendingIntent)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setDefaults(NotificationCompat.DEFAULT_ALL);
 
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -76,7 +107,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
                     CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_DEFAULT);
+                    NotificationManager.IMPORTANCE_HIGH);
+            channel.enableLights(true);
+            channel.enableVibration(true);
             notificationManager.createNotificationChannel(channel);
         }
 

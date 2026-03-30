@@ -24,6 +24,8 @@ import com.climaxion.drivedock.api.ApiInterface;
 import com.climaxion.drivedock.api.SessionManager;
 import com.google.gson.JsonObject;
 
+import java.io.IOException;
+
 import lk.payhere.androidsdk.PHConfigs;
 import lk.payhere.androidsdk.PHConstants;
 import lk.payhere.androidsdk.PHMainActivity;
@@ -31,6 +33,7 @@ import lk.payhere.androidsdk.PHResponse;
 import lk.payhere.androidsdk.model.InitRequest;
 import lk.payhere.androidsdk.model.StatusResponse;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -192,21 +195,24 @@ public class PaymentActivity extends AppCompatActivity {
 
     private void confirmPaymentToBackend(String orderId, String paymentId) {
         // Call backend API to confirm payment
-        Call<JsonObject> call = apiInterface.createPayment(reservationId, amount, selectedMethod);
-        call.enqueue(new Callback<JsonObject>() {
+        int userId = sessionManager.getUserId();
+        Call<ResponseBody> call = apiInterface.createPayment(userId, reservationId, amount, selectedMethod);
+        call.enqueue(new Callback<ResponseBody>() {
             @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    JsonObject data = response.body();
-                    if (data.has("message")) {
-                        Toast.makeText(PaymentActivity.this,
-                                data.get("message").getAsString(), Toast.LENGTH_SHORT).show();
+                    try {
+                        String result = response.body().string();
+                        Log.d("PaymentActivity", "Backend response: " + result);
+                        Toast.makeText(PaymentActivity.this, "Payment confirmed by backend", Toast.LENGTH_SHORT).show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             }
 
             @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Log.e("PaymentActivity", "Backend confirmation failed", t);
             }
         });

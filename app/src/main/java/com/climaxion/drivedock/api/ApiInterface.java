@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 
 import java.util.List;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.*;
 
@@ -57,7 +58,8 @@ public interface ApiInterface {
     // Payment endpoints
     @FormUrlEncoded
     @POST("api/payments")
-    Call<JsonObject> createPayment(
+    Call<ResponseBody> createPayment(
+            @Field("user_id") int userId,
             @Field("reservation_id") int reservationId,
             @Field("amount") double amount,
             @Field("payment_method") String paymentMethod
@@ -84,5 +86,12 @@ public interface ApiInterface {
             @Field("lname") String lastName,
             @Field("email") String email,
             @Field("phone_number") String phoneNumber
+    );
+
+    @FormUrlEncoded
+    @POST("api/user/fcm-token")
+    Call<JsonObject> saveFcmToken(
+            @Field("user_id") int userId,
+            @Field("fcm_token") String token
     );
 }
